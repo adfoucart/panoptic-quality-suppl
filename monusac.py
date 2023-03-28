@@ -36,9 +36,9 @@ LABELS_COLORS = {
 
 @dataclass
 class Nucleus:
-    bbox: np.array
-    mask: np.array
-    area: np.array
+    bbox: np.ndarray
+    mask: np.ndarray
+    area: np.ndarray
     image_path: str
     idx: int
 
@@ -48,7 +48,10 @@ class Nucleus:
         return im[self.bbox[0] - 10:self.bbox[2] + 10, self.bbox[1] - 10:self.bbox[3] + 10]
 
 
-def get_all_nuclei(path: str = None) -> Dict[str, List[Nucleus]]:
+NucleiDict = Dict[str, List[Nucleus]]
+
+
+def get_all_nuclei(path: str = None) -> NucleiDict:
     """Retrieve all the nuclei in the MoNuSAC annotations, ordered in a dict by cell type."""
 
     patients = [p for p in os.listdir(path) if os.path.isdir(os.path.join(path, p))]
@@ -184,7 +187,7 @@ def generate_nary_masks_from_teams(directory: str) -> None:
         generate_nary_masks_from_colorcoded(team_dir)
 
 
-def show_nucleus_team_comparison(team_path, nuclei, cl, idn):
+def show_nucleus_team_comparison(team_path: str, nuclei: NucleiDict, cl: str, idn: int):
     teams = ["Amirreza Mahbod", "IIAI", "SharifHooshPardaz", "SJTU_426"]
     teams_dir = {}
     for team in teams:
@@ -196,8 +199,10 @@ def show_nucleus_team_comparison(team_path, nuclei, cl, idn):
 
     plt.figure(figsize=(15, 5))
     contour_gt = find_contours(nucleus.mask)[0]
+    plt.subplot(1, len(teams_dir) + 1, 1)
+    plt.imshow(im)
     for idt, (team, team_dir) in enumerate(teams_dir.items()):
-        plt.subplot(1, len(teams_dir), idt + 1)
+        plt.subplot(1, len(teams_dir)+1, idt + 2)
         nary_team = np.load(f'{os.path.join(team_dir, image_file)}_nary.npy')
         region = nary_team[nucleus.bbox[0] - 10:nucleus.bbox[2] + 10, nucleus.bbox[1] - 10:nucleus.bbox[3] + 10]
         possible_matches = np.unique(region[nucleus.mask, 0])
@@ -234,11 +239,11 @@ class Match:
     """Stores the informations of a matching object pair"""
 
     def __init__(self, gt_idx, pred_idx, gt_class, pred_class, iou):
-        self.gt_idx = int(gt_idx)
-        self.pred_idx = int(pred_idx)
-        self.gt_class = int(gt_class)
-        self.pred_class = int(pred_class)
-        self.iou = iou
+        self.gt_idx: int = int(gt_idx)
+        self.pred_idx: int = int(pred_idx)
+        self.gt_class: int = int(gt_class)
+        self.pred_class: int = int(pred_class)
+        self.iou: float = iou
 
     def __str__(self):
         return f"Gt obj {self.gt_idx} (class {self.gt_class}) with " \
@@ -359,3 +364,29 @@ def show_matches_under_threshold(image_file: str, idt: int, teams_path: str, ann
             if i >= 6:
                 break
     plt.show()
+
+
+def find_image_with_most_nuclei(nuclei: NucleiDict) -> Tuple[int, str]:
+    """
+    Find the image patch that has the most nuclei in the annotations.
+    :param nuclei:
+    :return: Tuple with (n_nuclei, path)
+    """
+    nuclei_per_path = {}
+
+    for cl, nuclei_cl in nuclei.items():
+        for nucleus in nuclei_cl:
+            if nucleus.image_path not in nuclei_per_path:
+                nuclei_per_path[nucleus.image_path] = {}
+            if cl not in nuclei_per_path[nucleus.image_path]:
+                nuclei_per_path[nucleus.image_path][cl] = 0
+            nuclei_per_path[nucleus.image_path][cl] += 1
+
+    max_nuclei = (0, None)
+    for path, nuclei_counts in nuclei_per_path.items():
+        total = 0
+        for cl, count in nuclei_counts.items():
+            total += count
+        if total > max_nuclei[0]:
+            max_nuclei = (total, path)
+    return max_nuclei

@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage.morphology import distance_transform_edt as edt
 from skimage.metrics import hausdorff_distance
-from typing import Optional
+from typing import Optional, Dict
 
 
 def compute_iou(a: np.array, b: np.array, none_value: Optional[float] = None) -> Optional[float]:
@@ -37,3 +37,51 @@ def compute_hd(a: np.array, b: np.array, percentile: Optional[float] = None) -> 
         return max(np.sort(dc_a.flatten())[n_a], np.sort(dc_b.flatten())[n_b])
 
     return hausdorff_distance(c_a, c_b)
+
+
+def compute_panoptic_quality(matches) -> Dict:
+    unmatched_gt = list(matches.gt_idxs_class.keys())
+    unmatched_pred = list(matches.pred_idxs_class.keys())
+
+    TPc = [0, 0, 0, 0]
+    FPc = [0, 0, 0, 0]
+    FNc = [0, 0, 0, 0]
+    IoUc = [[], [], [], []]
+
+    for match in matches.matches:
+        if match.iou > 0.5 and matches.gt_idxs_class[match.gt_idx] == matches.pred_idxs_class[match.pred_idx]:
+            unmatched_gt.remove(match.gt_idx)
+            unmatched_pred.remove(match.pred_idx)
+            TPc[matches.gt_idxs_class[match.gt_idx] - 1] += 1
+            IoUc[matches.gt_idxs_class[match.gt_idx] - 1].append(match.iou)
+
+    for gt_idx in unmatched_gt:
+        FNc[matches.gt_idxs_class[gt_idx] - 1] += 1
+
+    for pred_idx in unmatched_pred:
+        FPc[matches.pred_idxs_class[pred_idx] - 1] += 1
+
+    SQc = []
+    RQc = []
+    PQc = []
+    for c in range(4):
+        if TPc[c]+FPc[c]+FNc[c] == 0:
+            continue
+        RQ = 2 * TPc[c] / (2 * TPc[c] + FPc[c] + FNc[c])
+        if len(IoUc[c]) == 0:
+            SQ = 0
+        else:
+            SQ = np.mean(IoUc[c])
+        RQc.append(RQ)
+        SQc.append(SQ)
+        PQc.append(RQ * SQ)
+    return {
+        "PQ": np.mean(PQc),
+        "PQc": PQc,
+        "SQc": SQc,
+        "RQc": RQc,
+        "TPc": TPc,
+        "FPc": FPc,
+        "FNc": FNc,
+        "IoUc": IoUc
+    }
