@@ -39,14 +39,14 @@ def compute_hd(a: np.array, b: np.array, percentile: Optional[float] = None) -> 
     return hausdorff_distance(c_a, c_b)
 
 
-def compute_panoptic_quality(matches) -> Dict:
+def compute_panoptic_quality(matches, n_classes: int = 4) -> Dict:
     unmatched_gt = list(matches.gt_idxs_class.keys())
     unmatched_pred = list(matches.pred_idxs_class.keys())
 
-    TPc = [0, 0, 0, 0]
-    FPc = [0, 0, 0, 0]
-    FNc = [0, 0, 0, 0]
-    IoUc = [[], [], [], []]
+    TPc = [0 for _ in range(n_classes)]
+    FPc = [0 for _ in range(n_classes)]
+    FNc = [0 for _ in range(n_classes)]
+    IoUc = [[] for _ in range(n_classes)]
 
     for match in matches.matches:
         if match.iou > 0.5 and matches.gt_idxs_class[match.gt_idx] == matches.pred_idxs_class[match.pred_idx]:
@@ -64,7 +64,7 @@ def compute_panoptic_quality(matches) -> Dict:
     SQc = []
     RQc = []
     PQc = []
-    for c in range(4):
+    for c in range(n_classes):
         if TPc[c]+FPc[c]+FNc[c] == 0:
             continue
         RQ = 2 * TPc[c] / (2 * TPc[c] + FPc[c] + FNc[c])
