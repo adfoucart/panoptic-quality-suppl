@@ -3,8 +3,8 @@
 This repository serves as supplementary material for:
 
 Foucart A., Debeir O., Decaestecker C.  
-"Why Panoptic Quality should be avoided as a metric for assessing cell nuclei segmentation and classification in digital pathology"  
-*Under review* at Scientific Reports.
+"Panoptic Quality should be avoided as a metric for assessing cell nuclei segmentation and classification in digital pathology"  
+*Accepted for publication* at Scientific Reports.
 
 Preprint available on ResearchSquare: https://www.researchsquare.com/article/rs-2272573/v1
 
